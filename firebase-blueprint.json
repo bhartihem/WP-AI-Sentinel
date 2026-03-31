@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user preferences, WordPress site configurations, and API keys.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email" },
+        "emailVerified": { "type": "boolean", "description": "Whether the user's email has been verified" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User photo URL" },
+        "subscription": {
+          "type": "object",
+          "properties": {
+            "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
+            "status": { "type": "string", "enum": ["active", "inactive", "trialing"] },
+            "expiresAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "api_keys": {
+          "type": "object",
+          "properties": {
+            "gemini": { "type": "string" },
+            "openai": { "type": "string" },
+            "anthropic": { "type": "string" },
+            "deepseek": { "type": "string" }
+          }
+        },
+        "wp_config": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "username": { "type": "string" },
+            "applicationPassword": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "MCPServer": {
+      "title": "MCP Server",
+      "description": "Configuration for a Model Context Protocol server.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner UID" },
+        "name": { "type": "string" },
+        "url": { "type": "string", "description": "The endpoint of the MCP server" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "error"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "url"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Stores individual messages in a conversation.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User UID who owns this message" },
+        "agentId": { "type": "string", "description": "The ID of the agent (e.g., 'developer', 'marketer')" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "data": { "type": "string", "description": "Base64 encoded data" }
+            }
+          }
+        }
+      },
+      "required": ["uid", "agentId", "role", "text", "timestamp"]
+    },
+    "UserFeedback": {
+      "title": "User Feedback",
+      "description": "User feedback and improvement suggestions.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["bug", "feature", "improvement", "other"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "content", "category", "createdAt"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Audit trail of all AI agent actions.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "agentId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "agentId", "action", "timestamp"]
+    },
+    "Snapshot": {
+      "title": "Snapshot",
+      "description": "Backup of a WordPress resource before modification.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "type": { "type": "string", "enum": ["post", "page", "setting", "plugin"] },
+        "originalId": { "type": "string" },
+        "data": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "type", "originalId", "data", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User-specific settings and configurations."
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "History of AI agent conversations."
+    },
+    "/mcp_servers/{serverId}": {
+      "schema": "MCPServer",
+      "description": "Custom MCP servers added by the user."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "UserFeedback",
+      "description": "User feedback and improvement suggestions."
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Audit trail of AI agent actions."
+    },
+    "/snapshots/{snapshotId}": {
+      "schema": "Snapshot",
+      "description": "Snapshots for undo functionality."
+    }
+  }
+}

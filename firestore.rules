@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - wp_config: map (optional)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: chats
+    // Document ID: {chatId} (Random ID)
+    // Fields:
+    //   - uid: string (required)
+    //   - agentId: string (required)
+    //   - role: string (required, 'user' or 'model')
+    //   - text: string (required)
+    //   - timestamp: timestamp (required)
+    //   - attachments: list (optional)
+    //
+    // Collection: activity_logs
+    // Document ID: {logId} (Random ID)
+    // Fields:
+    //   - uid: string (required)
+    //   - agentId: string (required)
+    //   - action: string (required)
+    //   - details: map (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: snapshots
+    // Document ID: {snapshotId} (Random ID)
+    // Fields:
+    //   - uid: string (required)
+    //   - type: string (required, 'post', 'page', 'setting', 'plugin')
+    //   - originalId: string or number (required)
+    //   - data: map (required)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+        data.uid == request.auth.uid &&
+        isValidEmail(data.email) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500));
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['uid', 'agentId', 'role', 'text', 'timestamp']) &&
+        data.uid == request.auth.uid &&
+        data.agentId is string &&
+        data.role in ['user', 'model'] &&
+        data.text is string && data.text.size() < 10000 &&
+        data.timestamp is timestamp;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "hembharti7@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) &&
+        request.resource.data.uid == resource.data.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidChatMessage(request.resource.data);
+      allow update: if isDocOwner() && isValidChatMessage(request.resource.data) &&
+        request.resource.data.uid == resource.data.uid;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /mcp_servers/{serverId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isDocOwner() && request.resource.data.uid == resource.data.uid;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /snapshots/{snapshotId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+  }
+}
