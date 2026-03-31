@@ -24,7 +24,7 @@ WordPress AI Sentinel is an open-source, AI-powered WordPress management suite. 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/wp-ai-sentinel.git
+   git clone https://github.com/bhartihem/WP-AI-Sentinel.git
    cd wp-ai-sentinel
    ```
 
